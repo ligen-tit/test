@@ -87,9 +87,15 @@ def optimization_newton():
         result_newton_j.append(f)
     return w
 
+# generate dataset for optimizing
 generate_dataset()
+
+# optimize by batch steepest gradiant method
 w_st = optimization_steepest()
+# optimize by newton based method
 w_nt = optimization_newton()
+
+# show the cost J(w) w.r.t. t
 
 x = np.arange(0, 10, 1)
 plt.plot(x, result_steepest_j, label='steepest')
