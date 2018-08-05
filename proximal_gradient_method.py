@@ -25,6 +25,7 @@ def proximal_gradient(ramd, iteration):
     eigen, _ = np.linalg.eig(2*A)
     L = max(eigen)  
     
+    # update w
     for _ in range(iteration):
         w = soft_thresholding(w - np.dot(A+A.T, w-mu) / L, ramd / L)
     
