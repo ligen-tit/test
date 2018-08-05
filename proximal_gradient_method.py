@@ -3,8 +3,7 @@ from math import sqrt
 import numpy as np
 from scipy import linalg
 
-# random design
-#A = rng.randn(m, n)  # random design
+# definition according to the given condition
 A = np.array([[3, 0.5],
      [0.5, 1]])
 mu = np.array([1, 2])
@@ -15,18 +14,24 @@ def soft_thresholding(u, q):
 
 
 def proximal_gradient(ramd, iteration):
-
+    """optimization"""
+    
     global A,mu
 
+    # initialize w(0) with given condition
     w = np.array([3, -1])
-    pobj = []
+
+    # Lipschitz constant
     eigen, _ = np.linalg.eig(2*A)
-    L = max(eigen)  # Lipschitz constant
+    L = max(eigen)  
+    
     for _ in range(iteration):
         a = np.dot(A+A.T, w-mu)
         w = soft_thresholding(w - np.dot(A+A.T, w-mu) / L, ramd / L)
+    
     return w
 
+# evaluation
 iteration = 100
 print("iteration:",iteration)
 lamd = 2
