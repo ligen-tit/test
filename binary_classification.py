@@ -1,55 +1,114 @@
 import numpy as np
-from livelossplot import PlotLosses
+from numpy.random import *
+import matplotlib.pyplot as plt
+
+x = []
+y = []
+lam = 0.001 #hyperparameter
+
+result_steepest_j = []
+result_newton_j = []
+
+def generate_dataset():
+    """generate random dataset by the following rules"""
+
+    global x,y
+    n = 40;
+    omega = randn(1, 1);
+    noise = 0.8 * randn(n, 1);
+    x = randn(n, 2);
+    y = 2 * ((omega * x[:,0] + x[:,1]).T + noise > 0) - 1;
+
+def cost_function(w):
+    """calculate J(w)"""
+
+    global x,y,lam
+    cost=0
+
+    for i in range(len(x)):
+        cost += np.log(1+np.exp((-y[i] * np.dot(w, x[i])))) + lam * np.dot(w.T, w)
+
+    return cost
+
+def gradient(w):
+    """get the gradient of J(w)"""
+
+    global x,y,lam
+    d = 0
+    for i in range(len(x)):
+        d += -y[i]*x[i]*(np.exp(-y[i] * np.dot(w, x[i])) / (1 + np.exp(-y[i] * np.dot(w, x[i]))))
+    return d + 2 * lam * w
+
+def hessian(w):
+
+    global x, y, lam
+    hessian = 0
+    for i in range(len(x)):
+        val = np.exp(-y[i] * np.dot(w, x[i])) / (1 + np.exp(-y[i] * np.dot(w, x[i])))**2
+        hessian += val * np.outer(x[i], x[i])
+
+    hessian += 2 * lam * np.eye(2)
+    return hessian
 
 
-def image_to_vector(X):
-    X = np.reshape(X, (len(X), -1))  # Flatten: (N x 28 x 28) -> (N x 784)
-    return np.c_[X, np.ones(len(X))]  # Append 1: (N x 784) -> (N x 785)
+def lipschitz_constant():
+    """return the lipschitz_constant"""
 
-data = np.load('../dataset/mnist.npz')
-Xtrain = image_to_vector(data['train_x'])
-Ytrain = data['train_y']
-Xtest = image_to_vector(data['test_x'])
-Ytest = data['test_y']
+    global x,lam
+    t = np.dot(x, x.T)
+    val = np.dot(x, x.T) + 2* lam * np.eye(len(x))
+    eigen,_ = np.linalg.eig(val)
+    return max(eigen)/4
 
-W = np.random.randn(10, 28 * 28 + 1)
-Confusion_matrix = np.zeros((10,10), dtype=np.int32)
+def optimization_steepest():
+    """optimize parameter w """
 
-eta = 0.001 # hyperparameter
-# liveloss = PlotLosses()
-for t in range(100):
-    # Structured perceptron for updating weights.
-    num_correct_train = 0
-    for x, y in zip(Xtrain, Ytrain):
-        y_pred = np.argmax(np.dot(W, x)) # np.argmax return the index max element
-        if y_pred != y:
-            W[y] += x * eta
-            W[y_pred] -= x * eta
-        else:
-            num_correct_train += 1
+    # initialization
+    w = np.array([0.1, 0.1])
 
-    # Evaluate and store the accuracy on the test set.
-    num_correct_test = 0
-    for x, y in zip(Xtest, Ytest):
-        y_pred = np.argmax(np.dot(W, x))
-        if y_pred == y:
-            num_correct_test += 1
-        Confusion_matrix[y_pred][y] += 1
+    # iteration(training)
+    for i in range(10):
+        f = cost_function(w)
+        learning_rage = 1/lipschitz_constant()
+        w = w - learning_rage * gradient(w)
+        result_steepest_j.append(f)
 
-    # Visualize accuracy values on the training and test sets.
-    # liveloss.update({
-    #     'accuracy': float(num_correct_train) / len(Ytrain),
-    #     'val_accuracy': float(num_correct_test) / len(Ytest)
-    # })
-    # liveloss.draw()
+    return w
 
-print('Accuracy: {:.4f} (test), {:.4f} (train)'.format(
-    float(num_correct_test) / len(Ytest),
-    float(num_correct_train) / len(Ytrain)
-))
+def optimization_newton():
 
-print(Confusion_matrix)
+    # initialization
+    w = np.array([0.1, 0.1])
 
-# result: test  accuracy: 0.8883
-#         train accuracy: 0.9002
-# variability of the result is due to random initialization of W
+    # iteration(training)
+    for i in range(10):
+        f = cost_function(w)
+        w = w - np.dot(np.linalg.inv(hessian(w)),gradient(w))
+        result_newton_j.append(f)
+    return w
+
+generate_dataset()
+w_st = optimization_steepest()
+w_nt = optimization_newton()
+
+x = np.arange(0, 10, 1)
+plt.plot(x, result_steepest_j, label='steepest')
+plt.plot(x, result_newton_j, label='newton')
+plt.xlabel("t")
+plt.ylabel("J(w)")
+plt.legend()
+plt.show()
+
+
+# # evaluate
+# colors = ['r' if y > 0 else 'b' for y in y[:,0]]
+# plt.scatter(x[:,0], x[:,1], c=colors)
+# x = np.arange(-2.0, 2.0, 0.1)
+# y1 = -w_st[0]/w_st[1]*x
+# y2 = -w_nt[0]/w_nt[1]*x
+# plt.plot(x, y1, label='steepest')
+# plt.plot(x, y2, label='newton')
+# plt.xlabel("x1")
+# plt.ylabel("x2")
+# plt.legend()
+# plt.show()
