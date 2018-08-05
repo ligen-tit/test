@@ -26,7 +26,6 @@ def proximal_gradient(ramd, iteration):
     L = max(eigen)  
     
     for _ in range(iteration):
-        a = np.dot(A+A.T, w-mu)
         w = soft_thresholding(w - np.dot(A+A.T, w-mu) / L, ramd / L)
     
     return w
